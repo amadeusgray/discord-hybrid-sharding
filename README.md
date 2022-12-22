@@ -3,7 +3,7 @@
 
 # Discord-Hybrid-Sharding
 
-One first package which combines sharding manager & internal sharding to save a lot of resources, which allows clustering!
+The first package which combines sharding manager & internal sharding to save a lot of resources, which allows clustering!
 
 In other words: "Mixing both: if you need `x` shards for `n` process!"
 
@@ -12,10 +12,8 @@ In other words: "Mixing both: if you need `x` shards for `n` process!"
 If you are interested in auto-scaling & cross-hosting on other machines, check out this package `npmjs.com/discord-cross-hosting`
 
 ### Featured by Discord Creators
-
 [Private Community for Verified Bot Developers. ](https://discord.gg/R3hPevRtUV)
-[Meet big bot and small bot developers and have a nice exchange...](https://discord.gg/R3hPevRtUV)
-
+[Meet new big bot and small bot developers and have a nice exchange...](https://discord.gg/R3hPevRtUV)
 <p>
 <a href="https://discord.gg/R3hPevRtUV">
 <img src="https://media.discordapp.net/attachments/980770619161448489/982938274677018624/banner.png?width=320&height=80">
@@ -28,8 +26,7 @@ The sharding manager is very heavy and uses more than 300MB per shard during lig
 
 Your only solution becomes converting to the sharding manager. That's why this new package will solve all your problems (tested by many bots with 20-170k guilds), because it spawns shards, which has internal shards. **You can save up to 60% on resources!**
 
--   **Zero Downtime ReClustering/ReSharding/Restarts**
--   **Decentralized BroadCastEval function -> Listenerless, less memory leaks & cluster/client doesn't have to be ready**
+-   **Decentralized ClusterEval function -> Listenerless, less memory leaks & cluster/client doesn't have to be ready**
 -   **Heartbeat System -> Respawn unresponsive or dead `ClusterClient`s**
 -   **IPC System -> Client <-> ClusterManager -> `.request()`, `.reply()`, `.send()`**
 -   **Fine-grained control over the cluster queue -> `manager.queue.next(), .stop(), .resume()`**
@@ -62,9 +59,9 @@ npm i discord-hybrid-sharding
 yarn add discord-hybrid-sharding
 ```
 
-# Supports all Discord.js Versions & all other Libraries (Eris, Discordeno)
+# Discord.js v13
 
--   **Full Discord.js v12, v13, v14 support**
+-   Full Discord.js v13 support
 -   `Strings` and `Functions` with `context` are supported in `.broadcastEval()`
 -   Most public methods accept sole objects, such as `.spawn({ amount: 20, timeout: -1 })`
 -   Very similar functions to the Discord.js ShardingManager and more for the advanced usage
@@ -99,7 +96,6 @@ const Cluster = require('discord-hybrid-sharding');
 const Discord = require('discord.js');
 
 const client = new Discord.Client({
-    // @ts-ignore | For Typescript use Cluster.Client.getInfo() instead of Cluster.data
     shards: Cluster.data.SHARD_LIST, // An array of shards that will get spawned
     shardCount: Cluster.data.TOTAL_SHARDS, // Total number of shards
 });
@@ -207,44 +203,6 @@ Get all ShardID's in the current cluster:
 
 # New functions & events:
 
-## `Zero Downtime Reclustering`:
-
-Zero Downtime Reclustering is a Plugin, which is used to reshard/recluster or even restart your bot with having a theoretical outage of some seconds.
-There are two options for the `restartMode`:
-
--   `gracefulSwitch`: Spawns all new Clusters with the provided Info in maintenance mode, once all clusters have been spawned and the DiscordClient is ready, the clusters will exit maintenance mode, where as it will fire the `client.cluster.on('ready')` event. In order to load the Database and listen to events. Moreover all Clusters will be gracefully killed, once all clusters exited maintenance mode.
--   `rolling`: Spawns the Clusters with the provided Info in maintenance mode, once the DiscordClient is ready of the Cluster, the Cluster will exit maintenance mode, where as it will fire the `client.cluster.on('ready')` event. In order to load the Database and listen to events. Moreover the OldCluster will be killed, since the Cluster has exited maintenance mode. Not recommended, when shardData has not been updated.
-
-Cluster.js
-
-```js
-const manager = new Cluster.Manager(`${__dirname}/bot.js`, {...});
-
-manager.extend(
-    new Cluster.ReClusterManager()
-)
-... ///SOME CODE
-// Start reclustering
-const optional = {totalShards, totalClusters....}
-manager.recluster.start({restartMode: 'gracefulSwitch', ...optional})
-```
-
-Bot.js
-
-```js
-const client = new Discord.Client({});
-client.cluster = new Cluster.Client(client);
-
-if (client.cluster.maintenance) console.log(`Bot on maintenance mode with ${client.cluster.maintenance}`);
-
-client.cluster.on('ready', () => {
-    // Load Events
-    // Handle Database stuff, to not process outdated data
-});
-
-client.login(token);
-```
-
 ## `HeartbeatSystem`
 
 -   Checks if Cluster/Client sends a heartbeat on a given interval
@@ -252,28 +210,27 @@ client.login(token);
 -   Cluster will get respawned after the given amount of missed heartbeats has been reached
 
 ```js
-const manager = new Cluster.Manager(`${__dirname}/bot.js`, {...});
-
-manager.extend(
-    new Cluster.HeartbeatManager({
+const manager = new Cluster.Manager(`${__dirname}/bot.js`, {
+    totalShards: 8,
+    shardsPerClusters: 2,
+    keepAlive: {
         interval: 2000, // Interval to send a heartbeat
         maxMissedHeartbeats: 5, // Maximum amount of missed Heartbeats until Cluster will get respawned
-    })
-)
-```
-
-## `Control Restarts`
-
--   Cap the amount of restarts per cluster to a given amount on a given interval
-
-```js
-const manager = new Cluster.Manager(`${__dirname}/bot.js`, {
-    ...YourOptions,
-    restarts: {
-        max: 5, // Maximum amount of restarts per cluster
-        interval: 60000 * 60, // Interval to reset restarts
+        maxClusterRestarts: 3, // Maximum Amount of restarts that can be performed in 1 hour in the HeartbeatSystem
     },
 });
+```
+
+## `EvalOnCluster`
+
+Decentralized ClusterClient eval function that doesn't open any listeners and minimizes the risk of creating a memory leak during `.broadcastEval()`
+
+-   Build-in eval timeout which resolves after a given time
+-   No additional listeners - less memory leaks, better than `.broadCastEval()`
+-   Client & all clusters don't need to be ready
+
+```js
+client.cluster.evalOnCluster('this.cluster.id', { cluster: 0, timeout: 10000 });
 ```
 
 ## `IPC System`
@@ -408,7 +365,6 @@ const shardList = Cluster.data.SHARD_LIST;
 client.cluster = new Cluster.Client(client);
 
 ///When the Client is ready, You can listen to the client's ready event:
-// Just add, when the client.on('ready') does not exist
 client.cluster.triggerReady();
 ```
 
