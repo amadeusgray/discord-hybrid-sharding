@@ -196,6 +196,8 @@ declare module 'discord-hybrid-sharding' {
     }
 
     export type data = {
+        DATOS: JSONObject;
+        DISCORD_TOKEN: string;
         SHARD_LIST: number[];
         TOTAL_SHARDS: number;
         LAST_SHARD_ID: number;
