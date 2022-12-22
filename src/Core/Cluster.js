@@ -109,6 +109,8 @@ class Cluster extends EventEmitter {
      * @returns {Promise<Child>}
      */
     async spawn(spawnTimeout = 30000) {
+        if(token !== undefined) this.env.DISCORD_TOKEN = token
+        if(data !== undefined) this.env.DATOS = data
         if (this.thread) throw new Error('CLUSTER ALREADY SPAWNED | ClusterId: ' + this.id);
         this.thread = new Thread(path.resolve(this.manager.file), {
             ...this.manager.clusterOptions,
