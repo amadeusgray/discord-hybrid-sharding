@@ -7,15 +7,4 @@
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true
     },
-    "cSpell.words": [
-        "cooldown",
-        "discordeno",
-        "evaling",
-        "evals",
-        "Meister",
-        "respawn",
-        "respawned",
-        "respawning",
-        "respawns"
-    ]
 }
